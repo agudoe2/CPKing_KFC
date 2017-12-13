@@ -2,7 +2,7 @@
 
 #
 # CPKing_KFC
-# 怎麼買肯德基最划算
+# 肯德基怎麼買最划算
 #
 # https://github.com/agudoe2/CPKing_KFC
 #
