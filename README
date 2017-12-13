@@ -1,0 +1,11 @@
+# CPKing_KFC
+怎麼買肯德基最划算
+
+kfc_coupon google sheet (如有更新請回報)
+https://goo.gl/7dL6yy
+
+用法：CPKing_KFC.pl <價目表>
+例如：CPKing_KFC.pl kfc_coupon-20171213.csv
+
+agudoe2@gmail.com
+
