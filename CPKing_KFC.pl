@@ -10,91 +10,28 @@
 # https://goo.gl/7dL6yy
 #
 # agudoe2@gmail.com
-# 2017/12/13
 #
 
-# 修改需求清單 (前面#代表可有可無。若需求<0代表不要這項)
-#################################################
-$req{'咔啦脆雞(中辣)'} = 8;
-#$req{'上校薄脆雞'} = 1;
-#$req{'美式BBQ醬烤煙燻雞'} = 1;
-#$req{'醬香酸甜風味炸雞'} = 1;
-#$req{'原味蛋撻'} = 2;
-#$req{'蘭姆醺萄蛋撻'} = 1;
-$req{'經典玉米'} = 3;
-#$req{'上校雞塊'} = 1;
-#$req{'雞汁風味飯'} = 1;
-#$req{'義式香草紙包雞'} = 1;
-#$req{'咔啦雞腿堡'} = 1;
-#$req{'上校經典脆雞堡'} = 1;
-#$req{'熱情森巴咔啦雞腿堡'} = 1;
-#$req{'紐奧良烤雞腿堡'} = 1;
-#$req{'紐奧良烤全雞'} = 1;
-#$req{'香酥脆薯(大)'} = 1;
-#$req{'香酥脆薯(中)'} = 1;
-#$req{'香酥脆薯(小)'} = 1;
-#$req{'勁爆雞米花(大)'} = 1;
-#$req{'勁爆雞米花(小)'} = 1;
-#$req{'香酥洋蔥圈'} = 1;
-#$req{'川香椒麻烤翅(對)'} = 1;
-#$req{'點心盒-勁爆雞米花+香酥脆薯(小)'} = 1;
-#$req{'點心盒-上校雞塊+香酥脆薯(小)'} = 1;
-#$req{'墨西哥莎莎霸王捲'} = 1;
-#$req{'金黃脆腿條(對)'} = 1;
-#$req{'草莓起司冰淇淋大福'} = 1;
-#$req{'提拉米蘇冰淇淋大福'} = 1;
-#$req{'鮮蔬沙拉(千島醬)'} = 1;
-#$req{'100%柳橙汁320g'} = 1;
-#$req{'百事可樂1.25L'} = 1;
-#$req{'百事可樂(大)'} = 1;
-#$req{'百事可樂(中)'} = 1;
-#$req{'百事可樂(小)'} = 1;
-#$req{'百事可樂(兒)'} = 1;
-#$req{'冰紅茶(大)'} = 1;
-#$req{'冰紅茶(中)'} = 1;
-#$req{'冰紅茶(小)'} = 1;
-#$req{'冰紅茶(兒)'} = 1;
-#$req{'冰無糖茉莉綠茶(大)'} = 1;
-#$req{'冰無糖茉莉綠茶(中)'} = 1;
-$req{'冰無糖茉莉綠茶(小)'} = -1;
-#$req{'冰無糖茉莉綠茶(兒)'} = 1;
-#$req{'冰義式咖啡'} = 1;
-#$req{'冰義式拿鐵'} = 1;
-#$req{'經典冰奶茶(中)'} = 1;
-#$req{'經典冰奶茶(小)'} = 1;
-#$req{'經典熱奶茶(中)'} = 1;
-#$req{'經典熱奶茶(小)'} = 1;
-#$req{'七喜(大)'} = 1;
-#$req{'七喜(中)'} = 1;
-#$req{'七喜(小)'} = 1;
-#$req{'七喜(兒)'} = 1;
-#$req{'鮮奶(中)'} = 1;
-#$req{'鮮奶(小)'} = 1;
-#$req{'熱紅茶'} = 1;
-#$req{'熱義式卡布奇諾'} = 1;
-#$req{'熱義式拿鐵'} = 1;
-#$req{'熱義式咖啡(大)'} = 1;
-#$req{'熱義式咖啡(小)'} = 1;
-#$req{'玉米濃湯(大)'} = 1;
-#$req{'玉米濃湯(小)'} = 1;
-#################################################
+# 請注意！需求清單改放到 req.txt 了！
 
 
-#my $ifile = "kfc_coupon.csv";
-my $ifile = $ARGV[0];
-die "usage: $0 <file.csv>\nex: $0 kfc_coupon.csv\n" if( $ifile eq "" );
-die "ERROR! $ifile not found\n" if( ! -e $ifile );
-open(FIN, "<$ifile") || die "ERROR! open $ifile failed";
-
-
-print "\n";
-print localtime()."\n";
-print "$ifile\n";
-print "\n";
-
+my $coupon_txt = "kfc_coupon.txt";
 my $stime = time;
 my ($sec, $min, $hour, $d, $m, $y) = localtime(time);
-my $today_date= $y*10000 + $m*100 + $d;
+my $today_date= (1900+$y)*10000 + ($m+1)*100 + $d;
+
+print "\n";
+print "用法： perl CPKing_KFC.pl [需求表。沒提供的話直接用req.txt]\n";
+print "例子1：prel CPKing_KFC.pl\n";
+print "例子2：prel CPKing_KFC.pl req.txt\n";
+print "例子3：prel CPKing_KFC.pl req_8_3.txt\n";
+print "\n";
+
+
+# 讀取價格資料表 kfc_coupon.csv
+my $csv_file = "kfc_coupon.csv";
+die "錯誤！找不到 $csv_file 這個檔案\n" if( ! -e $csv_file );
+open(FIN, "<$csv_file") || die "錯誤！開啟 $csv_file 過程發生錯誤";
 
 my $coupon_idx = 0;
 my $coupon_max = 0;
@@ -122,11 +59,7 @@ while(my $inbuf = <FIN>) {
         #這些欄不能空白
         next if( $tmp[$item_loc{'名稱'}] =~ /^\s*$/ );
         next if( $tmp[$item_loc{'優惠價'}] =~ /^\s*$/ );
-        my $valid_date = $tmp[$item_loc{'使用期限'}];
-        if( $valid_date =~ /\//) {
-            my @tmp_date = split /\//, $valid_date;
-            next if( $tmp_date[0]*10000 + $tmp_date[1]*100 + $tmp_date[2] < $today_date );
-        }
+        next if( &expired( $tmp[$item_loc{'有效期間'}] ) );
 
         #print "DEBUG: $coupon_idx : $inbuf\n";
         for(my $i=0; $i< @tmp; $i++) {
@@ -152,8 +85,30 @@ while(my $inbuf = <FIN>) {
 
         #處理單價列 20171211
         $ori_price_line = <FIN>;
+    } elsif( $inbuf =~ /^上次更新/ ) {
+        my @tmp = split /,/, $inbuf;
+        $csv_ver = $tmp[1];
     }
 }
+
+#印出所有優惠券內容
+open(FOUT, ">$coupon_txt") || die "錯誤！無法寫出所有優惠券內容到 $coupon_txt";
+print FOUT "#資料來源：https://goo.gl/7dL6yy\n";
+print FOUT "#版本：$csv_ver\n\n";
+for(my $i=0; $i<$coupon_idx; $i++) {
+    print FOUT "[$coupon[$i][$item_loc{'優惠代碼'}]] $coupon[$i][$item_loc{'名稱'}] \$$coupon[$i][$item_loc{'優惠價'}]";
+
+    my $vdate = $coupon[$i][$item_loc{'有效期間'}];
+    print FOUT "  有效期間：$vdate" if( $vdate =~ /\// );
+    print FOUT "\n";
+
+    print FOUT "-> ".&list_cnt( $i )."\n";
+
+    my $link = $coupon[$i][$item_loc{'連結'}];
+    print FOUT "$link\n" if( $link =~ /http/ );
+    print FOUT "\n";
+}
+close(FOUT);
 
 #單價列放最後才能補小細縫
 my @ori_price_tmp = split /,/, $ori_price_line;
@@ -161,7 +116,7 @@ for(my $i=$item_1st_loc; $i<@item_name; $i++) {
     $coupon[$coupon_idx][$item_loc{'名稱'}] = $item_name[$i];
     $coupon[$coupon_idx][$item_loc{'優惠代碼'}] = "單點";
     $coupon[$coupon_idx][$item_loc{'連結'}] = "na";
-    $coupon[$coupon_idx][$item_loc{'使用期限'}] = "na";
+    $coupon[$coupon_idx][$item_loc{'有效期間'}] = "na";
     $coupon[$coupon_idx][$item_loc{'原價'}] = $ori_price_tmp[$i];
     $coupon[$coupon_idx][$item_loc{'優惠價'}] = $ori_price_tmp[$i];
     $coupon[$coupon_idx][$i] = 1;
@@ -174,14 +129,32 @@ $coupon_max = $coupon_idx;
 #print "DEBUG: \n";
 close(FIN);
 
-#寫下需求清單
-foreach my $tmp (keys %req) {
-    my $tmp_loc = $item_loc{$tmp};
-    die "ERROR! no req $tmp item found!" if( $tmp_loc < $item_1st_loc);
-    $reqitem_cur[ $tmp_loc ] = $req{$tmp};
-}
 
-print "需求清單:\n";
+# 讀取需求檔 reqXXX.txt
+my $req_file = $ARGV[0];
+$req_file = "req.txt" if( $req_file eq "" );
+die "錯誤！需求表檔名必須是req開頭。例如req8_3.txt" if( $req_file !~ /^req.*/ );
+die "錯誤！找不到 $req_file 這個檔案\n" if( ! -e $req_file );
+
+open(FIN, "<$req_file") || die "錯誤！開啟 $req_file 過程發生錯誤";
+my $line = 0;
+while(my $inbuf = <FIN>) {
+    $line++;
+    next if($inbuf =~ /^#/);
+    chomp $inbuf;
+    my @tmp = split /\s+/, $inbuf;
+    next if( $tmp[0] == 0 );
+    my $tmp_loc = $item_loc{$tmp[1]};
+    die "$req_file第$line錯誤！找不到 $tmp[1] 這品項" if( $tmp_loc < $item_1st_loc);
+    $reqitem_cur[ $tmp_loc ] = $tmp[0];
+}
+close( FIN );
+
+
+print "目前日期時間：".localtime()."\n";
+print "價格資料表版本：$csv_ver\n";
+print "\n";
+print "需求清單: (需求表檔名：$req_file)\n";
 print "-------------------------\n";
 my $ori_price_total = 0;
 for(my $i=0; $i<@reqitem_cur; $i++) {
@@ -199,15 +172,16 @@ print "-------------------------\n";
 print "單點總價: \$$ori_price_total\n";
 print "\n";
 
-# init log pool
+#初始化前n低的價格
 for(my $i=0; $i<$log_capacity+1; $i++) {
     $log_pool[$i] = $ori_price_total;
 }
 
+#主要計算
 &compute_loop(0);
+#算完了
 
-
-# sort the cost
+#依價錢排序
 for( my $i=0; $i<$coupon_save_cnt; $i++) {
     $coupon_save_sort[$i] = $i;
 }
@@ -221,22 +195,22 @@ for(my $i=0; $i<$coupon_save_cnt-1; $i++) {
     }
 }
 
-# print the sorted result
+#印出排序結果
 print "\n\n\n";
 my $double_cost_bound = $cost_save[$coupon_save_sort[0]]*2;
 for(my $i=0; $i<$coupon_save_cnt; $i++) {
     my $i_sort = $coupon_save_sort[$i];
     my $this_cost = $cost_save[$i_sort];
     if($this_cost > $double_cost_bound) {
-        print "..bypass the other ".($coupon_save_cnt-$i)." which are more than double of the lowest.\n";
+        print "..忽略其他 ".($coupon_save_cnt-$i)." 比2倍單點價還貴的組合\n";
         last;
     }
     if($this_cost > $ori_price_total) {
-        print "..bypass the other ".($coupon_save_cnt-$i)." which are more than 單點總價.\n";
+        print "..忽略其他 ".($coupon_save_cnt-$i)." 比單點總價還貴的組合\n";
         last;
     }
     if( $i>=$log_capacity ) {
-        print "..bypass the other ".($coupon_save_cnt-$i)." which are more than log_capacity($log_capacity).\n";
+        print "..為了加速，只看最便宜的 $log_capacity 組，其他 ".($coupon_save_cnt-$i)." 組省略\n";
         last;
     }
 
@@ -260,10 +234,14 @@ for(my $i=0; $i<$coupon_save_cnt; $i++) {
 
 my $etime = time;
 
-print "Runtime: ".($etime-$stime)."s\n";
+print "\n";
+print "計算時間".($etime-$stime)."秒\n";
+print "已產生優惠券內容：$coupon_txt\n";
+
 
 exit;
 
+#遞迴計算主要function
 sub compute_loop {
     my $level = $_[0];
     my @reqitem_bak = @reqitem_cur;
@@ -327,6 +305,11 @@ sub compute_loop {
     }
 }
 
+#提供各產品細項
+#list_cnt(x)
+#x>=0: 第x項coupon券的內容
+#x=-1: 所有已使用coupon券的品項組合
+#x=-2: 所有已使用coupon券的品項組合-需求清單
 sub list_cnt {
     my $specific_coupon = $_[0];
     my $first = 1;
@@ -355,3 +338,14 @@ sub list_cnt {
     return $ret;
 }
 
+#是否已過期
+sub expired {
+    my $vdate = $_[0];
+    my $expired = 0;
+    if( $vdate =~ /\//) {
+        my @tmp_date = split /\//, $vdate;
+        $expired++ if( $tmp_date[0]*10000 + $tmp_date[1]*100 + $tmp_date[2] < $today_date );
+    }
+    #print "DEBUG: ($vdate) $today_date $expired\n";
+    return $expired;
+}
