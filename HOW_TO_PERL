@@ -1,0 +1,25 @@
+如果是windows，可以到這裡安裝active perl
+https://www.activestate.com/activeperl/downloads
+
+-------------------------------------------
+
+如果是linux，一般都有裝perl，可以直接跑
+
+-------------------------------------------
+
+(感謝網友提供) Android手機也可以跑了
+1. 把github上的檔案都下載後放進手機上的 /sdcard/Downsload/CPKing_KFC/ (目錄可能要自建)
+
+2. 安裝 Google Play 上的 Termux 
+https://play.google.com/store/apps/details?id=com.termux
+
+3. 依序執行以下命令
+apt update
+apt upgrade
+termux-setup-storage (跳出視窗問權限，選同意)
+pkg install perl
+cd storage/downloads/CPKing_KFC (其實就是 /sdcard/Downsload/CPKing_KFC/ ) 
+perl CPKing_KFC.pl
+
+4. 改完 req.txt 後可以再重新跑一次
+
