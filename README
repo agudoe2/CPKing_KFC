@@ -4,27 +4,18 @@
 kfc_coupon google sheet (如有更新請回報)
 https://goo.gl/7dL6yy
 
-用法：CPKing_KFC.pl <價目表>
-例如：CPKing_KFC.pl kfc_coupon-20171213.csv
+只需要下載3個檔案就能跑：CPKing_KFC.pl, kfc_coupon.csv, req.txt
 
+用法： perl CPKing_KFC.pl [需求表。沒提供的話直接用req.txt]
+例子1：prel CPKing_KFC.pl
+例子2：prel CPKing_KFC.pl req.txt
+例子3：prel CPKing_KFC.pl req_8_3.txt
+
+環境設定可以參考 HOW_TO_PERL (簡易教學文：如何在Android、windows、Linux下執行)
+可以參考 run_example.sh
+
+阿古多
 agudoe2@gmail.com
 
+Enjoy your KFC :)
 
-https://www.ptt.cc/bbs/fastfood/M.1513166956.A.B44.html
-
-推 charlie1667: 建議一下 同價位的飲料可以互補 不然選小可就找不到4  12/14 00:18  
-→ charlie1667: 0043了                                             12/14 00:18  
-→ charlie1667: 可以再問一下演算法嗎XD perl 看不懂QQ               12/14 00:19  
-c大問到重點其實可以再增加同類型計算(例如飲料3杯)不過還沒寫XD                    
-另外像炸烤雞4大項單點都是49，其實很多券或店都可以混搭                           
-咔啦脆雞(中辣)                                                                  
-上校薄脆雞                                                                      
-美式BBQ醬烤煙燻雞                                                               
-醬香酸甜風味炸雞                                                                
-                                                                                
-演算法很簡單就是遞迴compute_loop把整個結果算過一輪                              
-不過有加一些最佳化不然會算不完QQ                                                
-1.算到比單點貴的就放棄                                                          
-2.算到比前n個貴的就放棄 (目前n=log_capacity=10)                                 
-                                                                                
-有興趣可以fork來試試^^                                                          
