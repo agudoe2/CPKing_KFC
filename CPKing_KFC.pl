@@ -224,7 +224,7 @@ for(my $i=0; $i<$coupon_save_cnt; $i++) {
     }
 
     my $i1 = $i+1;
-    print "#$i1. Total price: \$$cost_save[$i_sort] -> ".&list_cnt(-1)."\n";
+    print "#$i1 總價: \$$cost_save[$i_sort] -> ".&list_cnt(-1)."\n";
     print $coupon_detail;
     print "☆便宜\$".($ori_price_total-$cost_save[$i_sort]);
     my $addition = &list_cnt(-2);
