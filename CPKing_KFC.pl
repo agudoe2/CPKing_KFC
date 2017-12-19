@@ -22,9 +22,9 @@ my $today_date= (1900+$y)*10000 + ($m+1)*100 + $d;
 
 print "\n";
 print "用法： perl CPKing_KFC.pl [需求表。沒提供的話直接用req.txt]\n";
-print "例子1：prel CPKing_KFC.pl\n";
-print "例子2：prel CPKing_KFC.pl req.txt\n";
-print "例子3：prel CPKing_KFC.pl req_8_3.txt\n";
+print "例子1：perl CPKing_KFC.pl\n";
+print "例子2：perl CPKing_KFC.pl req.txt\n";
+print "例子3：perl CPKing_KFC.pl req_8_3.txt\n";
 print "\n";
 
 
@@ -46,7 +46,10 @@ my @log_pool;
 
 
 while(my $inbuf = <FIN>) {
-    chomp $inbuf;
+    #fix: 錯誤！找不到玉米濃湯(小) 這品項
+    #https://github.com/agudoe2/CPKing_KFC/issues/1
+    #chomp $inbuf;
+    $inbuf =~ s/\r?\n$//;
 
     #非空白列
     next if( $inbuf =~ /^\s*$/ );
