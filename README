@@ -1,18 +1,17 @@
 # CPKing_KFC
 肯德基怎麼買最划算
 
+歡迎直接使用:)  http://kfc.sshd.space/  (by HamalAri)
+
 kfc_coupon google sheet (如有更新請回報)
 https://goo.gl/7dL6yy
-
-優惠券圖庫
-https://imgur.com/a/Mks8t
 
 只需要下載3個檔案就能跑：CPKing_KFC.pl, kfc_coupon.csv, req.txt
 
 用法： perl CPKing_KFC.pl [需求表。沒提供的話直接用req.txt]
-例子1：prel CPKing_KFC.pl
-例子2：prel CPKing_KFC.pl req.txt
-例子3：prel CPKing_KFC.pl req_8_3.txt
+例子1：perl CPKing_KFC.pl
+例子2：perl CPKing_KFC.pl req.txt
+例子3：perl CPKing_KFC.pl req_8_3.txt
 
 環境設定可以參考 HOW_TO_PERL (簡易教學文：如何在Android、windows、Linux下執行)
 可以參考 run_example.sh
@@ -22,3 +21,9 @@ agudoe2@gmail.com
 
 Enjoy your KFC :)
 
+
+ptt討論串
+Re: [情報] 自動計算 肯德基怎麼買最划算
+https://www.ptt.cc/bbs/fastfood/M.1513404261.A.459.html
+[情報] 自動計算 肯德基怎麼買最划算
+https://www.ptt.cc/bbs/fastfood/M.1513166956.A.B44.html
