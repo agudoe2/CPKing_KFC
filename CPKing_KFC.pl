@@ -16,6 +16,7 @@
 
 
 my $coupon_txt = "kfc_coupon.txt";
+my $output_html = "output.html";
 my $stime = time;
 my ($sec, $min, $hour, $d, $m, $y) = localtime(time);
 my $today_date= (1900+$y)*10000 + ($m+1)*100 + $d;
@@ -95,22 +96,36 @@ while(my $inbuf = <FIN>) {
 }
 
 #印出所有優惠券內容
+my $coupon_html = "";
+$coupon_html .= "相關優惠：\n";
+$coupon_html .= "<table border=1>\n";
+$coupon_html .= "<tr><th>券</th><th>優惠代碼</th><th>名稱</th><th>優惠價</th><th>有效期限</th><th>內容</th></tr>\n";
+
 open(FOUT, ">$coupon_txt") || die "錯誤！無法寫出所有優惠券內容到 $coupon_txt";
 print FOUT "#資料來源：https://goo.gl/7dL6yy\n";
 print FOUT "#版本：$csv_ver\n\n";
 for(my $i=0; $i<$coupon_idx; $i++) {
-    print FOUT "[$coupon[$i][$item_loc{'優惠代碼'}]] $coupon[$i][$item_loc{'名稱'}] \$$coupon[$i][$item_loc{'優惠價'}]";
+    my $code_tmp = $coupon[$i][$item_loc{'優惠代碼'}];
+    my $name_tmp = $coupon[$i][$item_loc{'名稱'}];
+    my $price_tmp = $coupon[$i][$item_loc{'優惠價'}];
+    print FOUT "[$code_tmp] $name_tmp \$$price_tmp";
 
     my $vdate = $coupon[$i][$item_loc{'有效期間'}];
     print FOUT "  有效期間：$vdate" if( $vdate =~ /\// );
     print FOUT "\n";
 
-    print FOUT "-> ".&list_cnt( $i )."\n";
+    my $contain_tmp = &list_cnt( $i );
+    print FOUT "-> $contain_tmp\n";
 
     my $link = $coupon[$i][$item_loc{'連結'}];
     print FOUT "$link\n" if( $link =~ /http/ );
     print FOUT "\n";
+
+    $link = "<a href=$link target=_blank>連結</a>" if( $link =~ /http/ );
+    $contain_tmp =~ s/、/<br>/g;
+    $coupon_html .= "<tr><td>$link</td><td><a name=\"$code_tmp\">$code_tmp</a></td><td>$name_tmp</td><td>$price_tmp</td><td>$vdate</td><td>$contain_tmp</td></tr>\n";
 }
+$coupon_html .= "</table>\n";
 close(FOUT);
 
 #單價列放最後才能補小細縫
@@ -153,6 +168,10 @@ while(my $inbuf = <FIN>) {
 }
 close( FIN );
 
+open(FHTML, ">$output_html") || die "錯誤！開啟 $output_html 過程發生錯誤";
+print FHTML "需求清單：<br>\n";
+print FHTML "<table border=1>\n";
+print FHTML "<tr><th>品項</th><th>數量</th><th>單點原價</th><th>金額</th></tr>\n";
 
 print "目前日期時間：".localtime()."\n";
 print "價格資料表版本：$csv_ver\n";
@@ -160,6 +179,7 @@ print "\n";
 print "需求清單: (需求表檔名：$req_file)\n";
 print "-------------------------\n";
 my $ori_price_total = 0;
+my $ori_cnt = 0;
 for(my $i=0; $i<@reqitem_cur; $i++) {
     next if($reqitem_cur[$i]==0);
     if($reqitem_cur[$i]<0) {
@@ -167,13 +187,21 @@ for(my $i=0; $i<@reqitem_cur; $i++) {
     } else {
         for(my $j=0; $j<@coupon; $j++) {
         }
+        my $ssum = $ori_price{$item_name[$i]}*$reqitem_cur[$i];
         print "$reqitem_cur[$i]*$item_name[$i] (單點原價:\$$ori_price{$item_name[$i]})\n";
-        $ori_price_total += $ori_price{$item_name[$i]}*$reqitem_cur[$i];
+        print FHTML "<tr><td>$item_name[$i]</td><td>$reqitem_cur[$i]</td><td>$ori_price{$item_name[$i]}</td><td>$ssum</td></tr>\n";
+        $ori_price_total += $ssum;
+        $ori_cnt += $reqitem_cur[$i];
     }
 }#
 print "-------------------------\n";
 print "單點總價: \$$ori_price_total\n";
 print "\n";
+
+
+print FHTML "<tr><th>總計</th><th>$ori_cnt</th><th></th><th>$ori_price_total</th></tr>\n";
+print FHTML "</table>\n";
+print FHTML "<p>\n";
 
 #初始化前n低的價格
 for(my $i=0; $i<$log_capacity+1; $i++) {
@@ -199,41 +227,67 @@ for(my $i=0; $i<$coupon_save_cnt-1; $i++) {
 }
 
 #印出排序結果
+print FHTML "計算結果：<br>\n";
+print FHTML "<table border=1>\n";
+print FHTML "<tr><th>排名</th><th>總價</th><th>省下</th><th>組合</th><th>多了</th></tr>\n";
+
 print "\n\n\n";
 my $double_cost_bound = $cost_save[$coupon_save_sort[0]]*2;
+my $ignore = "";
 for(my $i=0; $i<$coupon_save_cnt; $i++) {
     my $i_sort = $coupon_save_sort[$i];
     my $this_cost = $cost_save[$i_sort];
     if($this_cost > $double_cost_bound) {
-        print "..忽略其他 ".($coupon_save_cnt-$i)." 比2倍單點價還貴的組合\n";
+        $ignore = "..忽略其他 ".($coupon_save_cnt-$i)." 比2倍單點價還貴的組合";
+        print "$ignore\n";
         last;
     }
     if($this_cost > $ori_price_total) {
-        print "..忽略其他 ".($coupon_save_cnt-$i)." 比單點總價還貴的組合\n";
+        $ignore = "..忽略其他 ".($coupon_save_cnt-$i)." 比單點總價還貴的組合";
+        print "$ignore\n";
         last;
     }
     if( $i>=$log_capacity ) {
-        print "..為了加速，只看最便宜的 $log_capacity 組，其他 ".($coupon_save_cnt-$i)." 組省略\n";
+        $ignore = "..為了加速，只看最便宜的 $log_capacity 組，其他 ".($coupon_save_cnt-$i)." 組省略";
+        print "$ignore\n";
         last;
     }
 
 
     my $coupon_detail = "";
+    my $coupon_simple = "";
     for(my $j=0; $j<$coupon_max; $j++) {
         my $used_coupon_cnt = $coupon_saved[$i_sort][$j];
         $coupon_used[$j] = $used_coupon_cnt;
         next if($used_coupon_cnt ==0 );
-        $coupon_detail .= "[$coupon[$j][$item_loc{'優惠代碼'}]]*$used_coupon_cnt $coupon[$j][$item_loc{'名稱'}] \$$coupon[$j][$item_loc{'優惠價'}] -> ".&list_cnt( $j )."\n";
+        my $code_tmp = $coupon[$j][$item_loc{'優惠代碼'}];
+        $coupon_detail .= "[$code_tmp]*$used_coupon_cnt $coupon[$j][$item_loc{'名稱'}] \$$coupon[$j][$item_loc{'優惠價'}] -> ".&list_cnt( $j )."\n";
+        #if( $coupon[$j][$item_loc{'連結'}] =~ /http/ ) { $coupon_simple .= "<a href=$coupon[$j][$item_loc{'連結'}] target=_blank>"; }
+        if( $coupon[$j][$item_loc{'連結'}] =~ /http/ ) { $coupon_simple .= "<a href=#$code_tmp>"; }
+        $coupon_simple .= "[$code_tmp]";
+        if( $coupon[$j][$item_loc{'連結'}] =~ /http/ ) { $coupon_simple .= "</a>"; }
+        $coupon_simple .= "*$used_coupon_cnt $coupon[$j][$item_loc{'名稱'}] \$$coupon[$j][$item_loc{'優惠價'}]<br>";
     }
 
     my $i1 = $i+1;
+    my $diff = $ori_price_total-$cost_save[$i_sort];
     print "#$i1 總價: \$$cost_save[$i_sort] -> ".&list_cnt(-1)."\n";
     print $coupon_detail;
-    print "☆便宜\$".($ori_price_total-$cost_save[$i_sort]);
+    print "☆便宜\$$diff";
     my $addition = &list_cnt(-2);
     print "(+$addition_value=".($ori_price_total-$cost_save[$i_sort]+$addition_value).")，還多了：$addition" if($addition ne "");
     print "\n\n";
+
+    $addition =~ s/、/<br>/g;
+    print FHTML "<tr><td>$i1</td><td>$cost_save[$i_sort]</td><td>$diff</td><td>$coupon_simple</td><td>$addition</td></tr>\n";
 }
+print FHTML "</table>\n";
+print FHTML "$ignore\n" if( $ignore ne "");
+print FHTML "<p>\n";
+
+print FHTML $coupon_html;
+
+close(FHTML);
 
 my $etime = time;
 
