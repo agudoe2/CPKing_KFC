@@ -10,6 +10,8 @@ https://goo.gl/7dL6yy
 優惠券圖庫
 https://imgur.com/a/Mks8t
 
+====================================================
+
 只需要下載3個檔案就能跑：CPKing_KFC.pl, kfc_coupon.csv, req.txt
 
 用法： perl CPKing_KFC.pl [需求表。沒提供的話直接用req.txt]
@@ -20,8 +22,12 @@ https://imgur.com/a/Mks8t
 環境設定可以參考 HOW_TO_PERL (簡易教學文：如何在Android、windows、Linux下執行)
 可以參考 run_example.sh
 
+
+====================================================
+
 阿古多
 agudoe2@gmail.com
+http://agudoe2.blogspot.tw/
 
 Enjoy your KFC :)
 
