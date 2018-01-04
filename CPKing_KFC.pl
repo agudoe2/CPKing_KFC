@@ -26,6 +26,7 @@ my $today_date= (1900+$y)*10000 + ($m+1)*100 + $d;
 my $merge_words_chicken = "合併炸烤雞：咔啦脆雞(中辣)_或_上校薄脆雞_或_美式BBQ醬烤煙燻雞_或_醬香酸甜風味炸雞";
 my $merge_words_coketea = "合併冷飲：百事可樂_或_冰紅茶_或_冰無糖茉莉綠茶";
 my $merge_words_warning = "請注意！可能依不同分店或不同優惠券而有不同結果！不一定可互換成功！";
+my $need_set_words = "KFC加購";
 
 print "\n";
 print "用法： perl CPKing_KFC.pl [需求表。沒提供的話直接用req.txt]\n";
@@ -52,7 +53,10 @@ my $log_capacity = 10;
 my @log_pool;
 
 
+my $need_set = 0;
+my $csv_line = 0;
 while(my $inbuf = <FIN>) {
+    $csv_line++;
     #fix: 錯誤！找不到玉米濃湯(小) 這品項
     #https://github.com/agudoe2/CPKing_KFC/issues/1
     #chomp $inbuf;
@@ -70,6 +74,9 @@ while(my $inbuf = <FIN>) {
         next if( $tmp[$item_loc{'名稱'}] =~ /^\s*$/ );
         next if( $tmp[$item_loc{'優惠價'}] =~ /^\s*$/ );
         next if( &expired( $tmp[$item_loc{'有效期間'}] ) );
+
+        $need_set++ if( $tmp[$item_loc{'名稱'}] =~ /$need_set_words/ );
+        die "發生錯誤！$csv_file第$csv_line行：搭配餐後又出現套餐 (要調整順序：先套餐再搭配餐)\n" if( $need_set>0 && $tmp[$item_loc{'優惠代碼'}] eq "套餐" );
 
         for(my $i=0; $i< @tmp; $i++) {
             $coupon[$coupon_idx][$i] = $tmp[$i];
@@ -101,6 +108,7 @@ while(my $inbuf = <FIN>) {
     }
 }
 close(FIN);
+die "錯誤！$csv_file沒出現 $need_set_words" if( $need_set==0 );
 
 
 #單價列放最後才能補小細縫
@@ -469,11 +477,27 @@ sub compute_loop {
         }
 
         if($item_chk==$item_max) {
+            my $set_cnt = 0; # 套餐/桶餐數量。計算加購用
+            my $need_set = 0; # 是否有加購
+            my $debug_combination = "";
             for(my $i=0; $i<$coupon_max; $i++) {
-                next if( $coupon_used[$i]==0 );
-                #print "DEBUG: [$coupon_merge[$i][$item_loc{'優惠代碼'}]] $coupon_merge[$i][$item_loc{'名稱'}] \$$coupon_merge[$i][$item_loc{'優惠價'}] * $coupon_used[$i]\n";
                 $coupon_saved[$coupon_save_cnt][$i] = $coupon_used[$i];
+                next if( $coupon_used[$i]==0 );
+                #$debug_combination .= "DEBUG: [$coupon_merge[$i][$item_loc{'優惠代碼'}]] $coupon_merge[$i][$item_loc{'名稱'}] \$$coupon_merge[$i][$item_loc{'優惠價'}] * $coupon_used[$i]\n";
+                if( $coupon_merge[$i][$item_loc{'優惠代碼'}] eq "套餐" ) {
+                    $set_cnt += $coupon_used[$i];
+                } elsif( $coupon_merge[$i][$item_loc{'名稱'}] =~ /$need_set_words/ ) {
+                    $need_set += $coupon_used[$i];
+                }
             }
+            if( $need_set > $set_cnt ) { #檢查套餐數夠不夠加點
+                #for(my $i=0; $i<$coupon_max; $i++) {
+                #    $coupon_saved[$coupon_save_cnt][$i] = 0;
+                #}
+                last;
+            }
+            #print "DEBUG: need_set=$need_set set_cnt=$set_cnt\n$debug_combination\n";
+
             $cost_save[$coupon_save_cnt] = $cost_cur;
             $coupon_save_cnt++;
 
