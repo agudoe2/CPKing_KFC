@@ -48,12 +48,13 @@ my $item_1st_loc;
 my $item_max;
 my @item_name;
 my @reqitem_cur;
+my $accu_set = 0; #累積套餐數 -> 算加價購
 my $cost_cur = 0;
 my $log_capacity = 10;
 my @log_pool;
 
 
-my $need_set = 0;
+my $need_set_cnt = 0;
 my $csv_line = 0;
 while(my $inbuf = <FIN>) {
     $csv_line++;
@@ -75,8 +76,15 @@ while(my $inbuf = <FIN>) {
         next if( $tmp[$item_loc{'優惠價'}] =~ /^\s*$/ );
         next if( &expired( $tmp[$item_loc{'有效期間'}] ) );
 
-        $need_set++ if( $tmp[$item_loc{'名稱'}] =~ /$need_set_words/ );
-        die "發生錯誤！$csv_file第$csv_line行：搭配餐後又出現套餐 (要調整順序：先套餐再搭配餐)\n" if( $need_set>0 && $tmp[$item_loc{'優惠代碼'}] eq "套餐" );
+        if( $tmp[$item_loc{'名稱'}] =~ /$need_set_words/ ) {
+            $need_set_cnt++;
+            $coupon_set[$coupon_idx] = -1;
+        } elsif( $tmp[$item_loc{'優惠代碼'}] eq "套餐" ) {
+            $coupon_set[$coupon_idx] = 1;
+            die "發生錯誤！$csv_file第$csv_line行：搭配餐後又出現套餐 (要調整順序：先列出所有套餐才能出現$need_set_words)\n" if( $need_set_cnt>0 );
+        } else {
+            $coupon_set[$coupon_idx] = 0;
+        }
 
         for(my $i=0; $i< @tmp; $i++) {
             $coupon[$coupon_idx][$i] = $tmp[$i];
@@ -108,7 +116,7 @@ while(my $inbuf = <FIN>) {
     }
 }
 close(FIN);
-die "錯誤！$csv_file沒出現 $need_set_words" if( $need_set==0 );
+die "錯誤！$csv_file沒出現 $need_set_words" if( $need_set_cnt==0 );
 
 
 #單價列放最後才能補小細縫
@@ -477,26 +485,11 @@ sub compute_loop {
         }
 
         if($item_chk==$item_max) {
-            my $set_cnt = 0; # 套餐/桶餐數量。計算加購用
-            my $need_set = 0; # 是否有加購
-            my $debug_combination = "";
             for(my $i=0; $i<$coupon_max; $i++) {
                 $coupon_saved[$coupon_save_cnt][$i] = $coupon_used[$i];
                 next if( $coupon_used[$i]==0 );
-                #$debug_combination .= "DEBUG: [$coupon_merge[$i][$item_loc{'優惠代碼'}]] $coupon_merge[$i][$item_loc{'名稱'}] \$$coupon_merge[$i][$item_loc{'優惠價'}] * $coupon_used[$i]\n";
-                if( $coupon_merge[$i][$item_loc{'優惠代碼'}] eq "套餐" ) {
-                    $set_cnt += $coupon_used[$i];
-                } elsif( $coupon_merge[$i][$item_loc{'名稱'}] =~ /$need_set_words/ ) {
-                    $need_set += $coupon_used[$i];
-                }
+                #print "DEBUG: [$coupon_merge[$i][$item_loc{'優惠代碼'}]] $coupon_merge[$i][$item_loc{'名稱'}] \$$coupon_merge[$i][$item_loc{'優惠價'}] * $coupon_used[$i]\n";
             }
-            if( $need_set > $set_cnt ) { #檢查套餐數夠不夠加點
-                #for(my $i=0; $i<$coupon_max; $i++) {
-                #    $coupon_saved[$coupon_save_cnt][$i] = 0;
-                #}
-                last;
-            }
-            #print "DEBUG: need_set=$need_set set_cnt=$set_cnt\n$debug_combination\n";
 
             $cost_save[$coupon_save_cnt] = $cost_cur;
             $coupon_save_cnt++;
@@ -520,6 +513,11 @@ sub compute_loop {
 
             my $range_this = ($reqitem_cur[$i]-($reqitem_cur[$i]%$coupon_merge[$level][$i])) / $coupon_merge[$level][$i];
             $range_this++ if( ($reqitem_cur[$i]%$coupon_merge[$level][$i]) > 0);
+
+            #需要搭配套餐 而且 套餐數不夠用 --> 減少挑配餐
+            if( $coupon_set[$level]<0 && $range_this > $accu_set ) {
+                $range_this = $accu_set;
+            }
             #if( $range_this > 0 ) {
             #    print "DEBUG C: i=$i, item_name[$i]=$item_name[$i], reqitem_cur[$i]=$reqitem_cur[$i], coupon[$level][$i]=$coupon[$level][$i]\n";
             #}
@@ -538,8 +536,10 @@ sub compute_loop {
                 $reqitem_cur[$j] -= $coupon_merge[$level][$j]*$i;# if($coupon_merge[$level][$j]>0);
             }
             $cost_cur = $cost_tmp;
+            $accu_set += $coupon_set[$level]*$i;
             #print "DEBUG: $level/$coupon_max: ".(" "x$level)."$coupon[$level][$item_loc{'名稱'}] $coupon[$level][$item_loc{'優惠代碼'}] range = $i/$range_max\n";
             &compute_loop( $level+1 );
+            $accu_set -= $coupon_set[$level]*$i;
             @reqitem_cur = @reqitem_bak;
         }
     }
