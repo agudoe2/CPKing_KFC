@@ -27,6 +27,7 @@ my $merge_words_chicken = "合併炸烤雞：咔啦脆雞(中辣)_或_上校薄�
 my $merge_words_coketea = "合併冷飲：百事可樂_或_冰紅茶_或_冰無糖茉莉綠茶";
 my $merge_words_warning = "請注意！可能依不同分店或不同優惠券而有不同結果！不一定可互換成功！";
 my $need_set_words = "KFC加購";
+my $driveway_words = "KFC點餐車道VIP加購";
 
 print "\n";
 print "用法： perl CPKing_KFC.pl [需求表。沒提供的話直接用req.txt]\n";
@@ -79,6 +80,8 @@ while(my $inbuf = <FIN>) {
         if( $tmp[$item_loc{'名稱'}] =~ /$need_set_words/ ) {
             $need_set_cnt++;
             $coupon_set[$coupon_idx] = -1;
+        } elsif( $tmp[$item_loc{'名稱'}] =~ /$driveway_words/ ) {
+            $driveway_only[$coupon_idx] = 1;
         } elsif( $tmp[$item_loc{'優惠代碼'}] eq "套餐" ) {
             $coupon_set[$coupon_idx] = 1;
             die "發生錯誤！$csv_file第$csv_line行：搭配餐後又出現套餐 (要調整順序：先列出所有套餐才能出現$need_set_words)\n" if( $need_set_cnt>0 );
@@ -481,10 +484,10 @@ sub compute_loop {
     if( $level == $coupon_max ) {
         #先查是否買齊了
         for($item_chk=$item_1st_loc; $item_chk<$item_max; $item_chk++) {
-            last if( $reqitem_cur[$item_chk] > 0);
+            last if( $reqitem_cur[$item_chk] > 0); #需要的還不全
         }
 
-        if($item_chk==$item_max) {
+        if( $item_chk==$item_max && !($type_used<2 && $driveway_coupon_used) ) { #都買齊了 且 車道vip有其他消費
             for(my $i=0; $i<$coupon_max; $i++) {
                 $coupon_saved[$coupon_save_cnt][$i] = $coupon_used[$i];
                 next if( $coupon_used[$i]==0 );
@@ -504,24 +507,31 @@ sub compute_loop {
     } else {
         #計算最多幾組
         my $range_max=0;
-        for(my $i=$item_1st_loc; $i<$item_max; $i++) {
-            next if($coupon_merge[$level][$i]==0);
-            if($reqitem_cur[$i]<0) {
-                $range_max = 0;
-                last;
-            }
 
-            my $range_this = ($reqitem_cur[$i]-($reqitem_cur[$i]%$coupon_merge[$level][$i])) / $coupon_merge[$level][$i];
-            $range_this++ if( ($reqitem_cur[$i]%$coupon_merge[$level][$i]) > 0);
+        if( $driveway_coupon_used && $driveway_only[$level] ) {
+            #已經用過點餐車道VIP而且這次又是點餐車道VIP coupon
+        } else {
+            for(my $i=$item_1st_loc; $i<$item_max; $i++) {
+                next if($coupon_merge[$level][$i]==0);
 
-            #需要搭配套餐 而且 套餐數不夠用 --> 減少挑配餐
-            if( $coupon_set[$level]<0 && $range_this > $accu_set ) {
-                $range_this = $accu_set;
+                if($reqitem_cur[$i]<0) { #出現不要的食物
+                    $range_max = 0;
+                    last;
+                }
+
+                my $range_this = ($reqitem_cur[$i]-($reqitem_cur[$i]%$coupon_merge[$level][$i])) / $coupon_merge[$level][$i];
+                $range_this++ if( ($reqitem_cur[$i]%$coupon_merge[$level][$i]) > 0); #非整除
+
+                #需要搭配套餐 而且 套餐數不夠用 --> 減少挑配餐
+                if( $coupon_set[$level]<0 && $range_this > $accu_set ) {
+                    $range_this = $accu_set;
+                }
+                #if( $range_this > 0 ) {
+                #    print "DEBUG C: i=$i, item_name[$i]=$item_name[$i], reqitem_cur[$i]=$reqitem_cur[$i], coupon[$level][$i]=$coupon[$level][$i]\n";
+                #}
+                $range_max = $range_this if( $range_max < $range_this );
+                $range_max = 1 if( $driveway_only[$level] ); #點餐車道vip只能用一張
             }
-            #if( $range_this > 0 ) {
-            #    print "DEBUG C: i=$i, item_name[$i]=$item_name[$i], reqitem_cur[$i]=$reqitem_cur[$i], coupon[$level][$i]=$coupon[$level][$i]\n";
-            #}
-            $range_max = $range_this if( $range_max < $range_this );
         }
 
         for(my $i=0; $i<=$range_max; $i++) {
@@ -537,10 +547,15 @@ sub compute_loop {
             }
             $cost_cur = $cost_tmp;
             $accu_set += $coupon_set[$level]*$i;
+            $type_used++ if($i>0);
+            $driveway_coupon_used++ if($driveway_only[$level] && $i>0 );
             #print "DEBUG: $level/$coupon_max: ".(" "x$level)."$coupon[$level][$item_loc{'名稱'}] $coupon[$level][$item_loc{'優惠代碼'}] range = $i/$range_max\n";
             &compute_loop( $level+1 );
+            ###
             $accu_set -= $coupon_set[$level]*$i;
             @reqitem_cur = @reqitem_bak;
+            $type_used-- if($i>0);
+            $driveway_coupon_used-- if($driveway_only[$level] && $i>0 );
         }
     }
 }
