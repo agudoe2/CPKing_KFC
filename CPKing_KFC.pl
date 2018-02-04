@@ -26,6 +26,7 @@ my $today_date= (1900+$y)*10000 + ($m+1)*100 + $d;
 my $merge_words_chicken = "合併炸烤雞：咔啦脆雞(中辣)_或_上校薄脆雞_或_美式BBQ醬烤煙燻雞_或_醬香酸甜風味炸雞";
 my $merge_words_coketea = "合併冷飲：百事可樂_或_冰紅茶_或_冰無糖茉莉綠茶";
 my $merge_words_warning = "請注意！可能依不同分店或不同優惠券而有不同結果！不一定可互換成功！";
+my $driveway_enable_words = "開車且經由KFC取餐車道訂餐取餐";
 my $need_set_words = "KFC加購";
 my $driveway_words = "KFC點餐車道VIP加購";
 
@@ -193,6 +194,7 @@ die "錯誤！找不到 $req_file 這個檔案\n" if( ! -e $req_file );
 
 open(FIN, "<$req_file") || die "錯誤！開啟 $req_file 過程發生錯誤";
 my $line = 0;
+my $driveway_enable = 0;
 while(my $inbuf = <FIN>) {
     $line++;
     next if($inbuf =~ /^#/);
@@ -202,6 +204,7 @@ while(my $inbuf = <FIN>) {
     my @tmp = split /\s+/, $inbuf;
     next if( $tmp[0] == 0 );
     my $tmp_loc = $item_loc{$tmp[1]};
+
     if( $tmp[1] =~ /^合併/ ) {
         if( $tmp[1] eq $merge_words_chicken ) {
             $merge_chicken = 1;
@@ -210,6 +213,9 @@ while(my $inbuf = <FIN>) {
         } else {
             die "$req_file第$line行錯誤！錯誤的合併選項";
         }
+        next;
+    } elsif( $tmp[1] eq $driveway_enable_words) {
+        $driveway_enable = 1;
         next;
     }
     die "$req_file第$line行錯誤！找不到 $tmp[1] 這品項" if( $tmp_loc < $item_1st_loc);
@@ -371,7 +377,13 @@ if( $real_merge ) {
     print FHTML "\n";
 }
 
-
+if( $driveway_enable ) {
+    print "$driveway_enable_words\n";
+    print FHTML "$driveway_enable_words<br>\n";
+} else {
+    print "沒開車\n";
+    print FHTML "沒開車<br>\n";
+}
 
 #主要計算
 &compute_loop(0);
@@ -508,8 +520,9 @@ sub compute_loop {
         #計算最多幾組
         my $range_max=0;
 
-        if( $driveway_coupon_used && $driveway_only[$level] ) {
-            #已經用過點餐車道VIP而且這次又是點餐車道VIP coupon
+        if( $driveway_only[$level] && ($driveway_coupon_used || !$driveway_enable) ) {
+            #點餐車道VIP coupon
+            #   用過 或是 沒開車
         } else {
             for(my $i=$item_1st_loc; $i<$item_max; $i++) {
                 next if($coupon_merge[$level][$i]==0);
