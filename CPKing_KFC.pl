@@ -23,10 +23,10 @@ my $output_html = "output.html";
 my $stime = time;
 my ($sec, $min, $hour, $d, $m, $y) = localtime(time);
 my $today_date= (1900+$y)*10000 + ($m+1)*100 + $d;
-my $merge_words_chicken = "合併炸烤雞：咔啦脆雞(中辣)_或_上校薄脆雞_或_美式BBQ醬烤煙燻雞_或_醬香酸甜風味炸雞";
+my $merge_words_chicken = "合併炸烤雞：咔啦脆雞(中辣)_或_上校薄脆雞_或_美式BBQ醬烤煙燻雞";
 my $merge_words_coketea = "合併冷飲：百事可樂_或_冰紅茶_或_冰無糖茉莉綠茶";
 my $merge_words_warning = "請注意！可能依不同分店或不同優惠券而有不同結果！不一定可互換成功！";
-my $driveway_enable_words = "開車且經由KFC取餐車道訂餐取餐";
+my $driveway_enable_words = "經由KFC點餐車道";
 my $need_set_words = "KFC加購";
 my $driveway_words = "KFC點餐車道VIP加購";
 
@@ -126,6 +126,7 @@ die "錯誤！$csv_file沒出現 $need_set_words" if( $need_set_cnt==0 );
 #單價列放最後才能補小細縫
 my @ori_price_tmp = split /,/, $ori_price_line;
 for(my $i=$item_1st_loc; $i<$item_max; $i++) {
+    next if($item_name[$i]=~/下架/);
     $coupon[$coupon_idx][$item_loc{'名稱'}] = $item_name[$i];
     $coupon[$coupon_idx][$item_loc{'優惠代碼'}] = "單點";
     $coupon[$coupon_idx][$item_loc{'連結'}] = "na";
@@ -270,7 +271,7 @@ my $real_merge = 0;
 
 #處理合併
 if( $merge_chicken ) {
-    my @tmp_2bmerge = qw/咔啦脆雞(中辣) 上校薄脆雞 美式BBQ醬烤煙燻雞 醬香酸甜風味炸雞/;
+    my @tmp_2bmerge = qw/咔啦脆雞(中辣) 上校薄脆雞 美式BBQ醬烤煙燻雞/;
     my $cnt_merged = 0;
 
     #合併需求
@@ -381,8 +382,8 @@ if( $driveway_enable ) {
     print "$driveway_enable_words\n";
     print FHTML "$driveway_enable_words<br>\n";
 } else {
-    print "沒開車\n";
-    print FHTML "沒開車<br>\n";
+    print "不是經由KFC點餐車道\n";
+    print FHTML "不是經由KFC點餐車道<br>\n";
 }
 
 #主要計算
@@ -522,7 +523,7 @@ sub compute_loop {
 
         if( $driveway_only[$level] && ($driveway_coupon_used || !$driveway_enable) ) {
             #點餐車道VIP coupon
-            #   用過 或是 沒開車
+            #   用過 或是 不是經由KFC點餐車道
         } else {
             for(my $i=$item_1st_loc; $i<$item_max; $i++) {
                 next if($coupon_merge[$level][$i]==0);
