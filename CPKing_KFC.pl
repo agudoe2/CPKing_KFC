@@ -22,7 +22,10 @@ my $coupon_txt = "kfc_coupon.txt";
 my $output_html = "output.html";
 my $stime = time;
 my ($sec, $min, $hour, $d, $m, $y) = localtime(time);
-my $today_date= (1900+$y)*10000 + ($m+1)*100 + $d;
+#my $today_date= (1900+$y)*10000 + ($m+1)*100 + $d;
+print ">> DEBUG 20190210 暫時排除過期日檢查：因為沒有更新csv結果僅供參考\n";
+my $today_date= (2018)*10000 + (3)*100 + 9;
+print ">> DEBUG 20190210 暫時排除過期日檢查：因為沒有更新csv結果僅供參考\n";
 my $merge_words_chicken = "合併炸烤雞：咔啦脆雞(中辣)_或_上校薄脆雞_或_美式BBQ醬烤煙燻雞";
 my $merge_words_coketea = "合併冷飲：百事可樂_或_冰紅茶_或_冰無糖茉莉綠茶";
 my $merge_words_warning = "請注意！可能依不同分店或不同優惠券而有不同結果！不一定可互換成功！";
@@ -52,7 +55,7 @@ my @item_name;
 my @reqitem_cur;
 my $accu_set = 0; #累積套餐數 -> 算加價購
 my $cost_cur = 0;
-my $log_capacity = 10;
+my $log_capacity = 10; #比較保留前n低的組合
 my @log_pool;
 
 
@@ -145,6 +148,7 @@ for(my $i=0; $i<$coupon_max; $i++) {
     for(my $j=0; $j<$item_max; $j++) {
         $coupon_merge[$i][$j] = $coupon[$i][$j];
     }
+    $coupon_merge_price[$i] = $coupon_merge[$i][$item_loc{'優惠價'}]; #加速
 }
 
 
@@ -204,7 +208,6 @@ while(my $inbuf = <FIN>) {
     $inbuf =~ s/\r?\n$//;
     my @tmp = split /\s+/, $inbuf;
     next if( $tmp[0] == 0 );
-    my $tmp_loc = $item_loc{$tmp[1]};
 
     if( $tmp[1] =~ /^合併/ ) {
         if( $tmp[1] eq $merge_words_chicken ) {
@@ -219,6 +222,8 @@ while(my $inbuf = <FIN>) {
         $driveway_enable = 1;
         next;
     }
+
+    my $tmp_loc = $item_loc{$tmp[1]};
     die "$req_file第$line行錯誤！找不到 $tmp[1] 這品項" if( $tmp_loc < $item_1st_loc);
     $reqitem_cur[ $tmp_loc ] = $tmp[0];
 }
@@ -239,6 +244,7 @@ print "需求清單: (需求表檔名：$req_file)\n";
 print "-------------------------\n";
 my $ori_price_total = 0;
 my $ori_cnt = 0;
+
 for(my $i=0; $i<@reqitem_cur; $i++) {
     next if($reqitem_cur[$i]==0);
     if($reqitem_cur[$i]<0) {
@@ -261,15 +267,15 @@ print FHTML "</table>\n";
 print FHTML "<p>\n";
 print FHTML "\n";
 
-#初始化前n低的價格
-for(my $i=0; $i<$log_capacity+1; $i++) {
+#初始化前n低的價格，用來比較前log_capacity低的組合
+for(my $i=0; $i<=$log_capacity; $i++) {
     $log_pool[$i] = $ori_price_total;
 }
 
 
 my $real_merge = 0;
 
-#處理合併
+#處理合併炸烤雞。合併後價錢設定為咔啦脆雞(中辣)
 if( $merge_chicken ) {
     my @tmp_2bmerge = qw/咔啦脆雞(中辣) 上校薄脆雞 美式BBQ醬烤煙燻雞/;
     my $cnt_merged = 0;
@@ -289,12 +295,12 @@ if( $merge_chicken ) {
             for( my $i=0; $i< @tmp_2bmerge; $i++ ) {
                 my $tmp_loc = $item_loc{ $tmp_2bmerge[$i] };
                 die "錯誤！找不到 $tmp_2bmerge[$i] 這品項" if( $tmp_loc < $item_1st_loc);
-                if( $coupon_merge[$c][ $tmp_loc ] < 0 ) {
+                if( $coupon_merge[$c][ $tmp_loc ] < 0 ) { # 不要這項
                     $coupon_merge[$c][ $item_max ] = -1;
                 } elsif( $coupon_merge[$c][ $item_max ] >= 0 ) {
-                    $coupon_merge[$c][ $item_max ] += $coupon_merge[$c][ $tmp_loc ];
+                    $coupon_merge[$c][ $item_max ] += $coupon_merge[$c][ $tmp_loc ]; # 轉移到合併項
                 }
-                $coupon_merge[$c][ $tmp_loc ] = 0;
+                $coupon_merge[$c][ $tmp_loc ] = 0; # 清掉舊的
             }
         }
         $item_name[$item_max] = $merge_words_chicken;
@@ -305,15 +311,15 @@ if( $merge_chicken ) {
     }
 }
 
-#處理合併
+#處理合併冷飲。合併後價錢設定為百事可樂(小)
 if( $merge_coketea ) {
     my @tmp_2bmerge = qw/冰無糖茉莉綠茶 冰紅茶 百事可樂/;
     my $cnt_merged = 0;
 
-    #合併需求
+    #合併需求 (寫法跟炸烤雞不一樣因為冷飲有大中小兒杯)
     for( my $i=0; $i< @tmp_2bmerge; $i++ ) {
         for(my $j=$item_1st_loc; $j<$item_max; $j++) {
-            if( $item_name[$j] =~ /$tmp_2bmerge[$i]/ ) {
+            if( $item_name[$j] =~ /^$tmp_2bmerge[$i]/ ) {
                 $cnt_merged += $reqitem_cur[ $j ];
                 $reqitem_cur[ $j ] = 0;
             }
@@ -326,13 +332,13 @@ if( $merge_coketea ) {
         for(my $c=0; $c<$coupon_max; $c++) {
             for( my $i=0; $i< @tmp_2bmerge; $i++ ) {
                 for(my $j=$item_1st_loc; $j<$item_max; $j++) {
-                    if( $item_name[$j] =~ /$tmp_2bmerge[$i]/ ) {
-                        if( $coupon_merge[$c][ $j ] < 0 ) {
+                    if( $item_name[$j] =~ /^$tmp_2bmerge[$i]/ ) {
+                        if( $coupon_merge[$c][ $j ] < 0 ) { # 不要這項
                             $coupon_merge[$c][ $item_max ] = -1;
                         } elsif( $coupon_merge[$c][ $item_max ] >= 0 ) {
-                            $coupon_merge[$c][ $item_max ] += $coupon_merge[$c][ $j ];
+                            $coupon_merge[$c][ $item_max ] += $coupon_merge[$c][ $j ]; # 轉移到合併項
                         }
-                        $coupon_merge[$c][ $j ] = 0;
+                        $coupon_merge[$c][ $j ] = 0; # 清掉舊的
                     }
                 }
             }
@@ -384,6 +390,50 @@ if( $driveway_enable ) {
 } else {
     print "不是經由KFC點餐車道\n";
     print FHTML "不是經由KFC點餐車道<br>\n";
+}
+
+my @dont_want = ();
+my $reqitem2_gold = 0;
+my $reqitem2_now = 0;
+my $reqitem2_typ = 0;
+my $reqitem2_cnt = 0;
+my $reqitem2_maxcnt = 8; # 64bit/8
+# 把 reqitem_cur 轉成 reqitem2_XXX
+for(my $i=0; $i<@reqitem_cur; $i++) {
+    if($reqitem_cur[$i]==0) {
+        # next;
+    } elsif( $reqitem_cur[$i]<0 ) { #不要xxx，掃一遍所有coupon把有xxx的拿掉
+        push @dont_want, $i;
+        # next;
+    } else { # $reqitem_cur[$i]>0
+        if( $reqitem2_cnt<$reqitem2_maxcnt ) {
+            $reqitem2_gold <<= 8;
+            $reqitem2_gold |= $reqitem_cur[$i];
+            $reqitem2_typ <<= 8;
+            $reqitem2_typ |= $i;
+            $reqitem2_cnt++;
+        } else {
+            print "警告！要計算的品項超過上限reqitem_maxcnt($reqitem2_maxcnt)，先忽略$tmp[1]需要$reqitem_cur[$i]個\n";
+            # next;
+        }
+    }
+}
+
+# 建立coupon2_merge (只保留要求，加速計算)
+my @coupon2_merge = ();
+for(my $i=0; $i<$reqitem2_cnt; $i++) {
+    my $this_typ = ($reqitem2_typ>>(8*($reqitem2_cnt-1-$i))) & 0xff;
+    for(my $j=0; $j<$coupon_max; $j++) {
+        $coupon2_merge[$j] <<= 8;
+        $coupon2_merge[$j] |= $coupon_merge[$j][$this_typ];
+    }
+}
+
+# 如果不要某項，就把對應的coupon2_merge丟掉
+foreach my $i (@dont_want) {
+    for(my $j=0; $j<$coupon_max; $j++) {
+        $coupon2_merge[$j] = 0 if( $coupon_merge[$j][$i] > 0 );
+    }
 }
 
 #主要計算
@@ -448,9 +498,9 @@ for(my $i=0; $i<$coupon_save_cnt; $i++) {
         next if($used_coupon_cnt ==0 );
         my $code_tmp = $coupon_merge[$j][$item_loc{'優惠代碼'}];
         my $link = $coupon_merge[$j][$item_loc{'連結'}];
-        $coupon_detail .= "[$code_tmp]*$used_coupon_cnt $coupon_merge[$j][$item_loc{'名稱'}] \$$coupon_merge[$j][$item_loc{'優惠價'}] -> ".&list_cnt( $j )."\n";
+        $coupon_detail .= "[$code_tmp]*$used_coupon_cnt $coupon_merge[$j][$item_loc{'名稱'}] \$$coupon_merge_price[$j] -> ".&list_cnt( $j )."\n";
         $code_tmp = "<a href=$link target=_blank>$code_tmp</a>" if( $link =~ /http/ );
-        $coupon_simple .= "[$code_tmp]*$used_coupon_cnt <a href=#coupon$j>$coupon_merge[$j][$item_loc{'名稱'}]</a> \$$coupon_merge[$j][$item_loc{'優惠價'}]<br>";
+        $coupon_simple .= "[$code_tmp]*$used_coupon_cnt <a href=#coupon$j>$coupon_merge[$j][$item_loc{'名稱'}]</a> \$$coupon_merge_price[$j]<br>";
     }
 
     my $i1 = $i+1;
@@ -485,92 +535,100 @@ print "計算時間".($etime-$stime)."秒\n";
 print "已產生優惠券內容：$coupon_txt\n";
 print "已產生結果網頁：$output_html\n";
 
+print ">> DEBUG 20190210 暫時排除過期日檢查：因為沒有更新csv結果僅供參考\n";
 
 exit;
 
 #遞迴計算主要function
 sub compute_loop {
     my $level = $_[0];
-    my @reqitem_bak = @reqitem_cur;
+    my $reqitem2_bak = $reqitem2_now;
     my $cost_bak = $cost_cur;
 
-    if( $level == $coupon_max ) {
-        #先查是否買齊了
-        for($item_chk=$item_1st_loc; $item_chk<$item_max; $item_chk++) {
-            last if( $reqitem_cur[$item_chk] > 0); #需要的還不全
-        }
-
-        if( $item_chk==$item_max && !($type_used<2 && $driveway_coupon_used) ) { #都買齊了 且 車道vip有其他消費
-            for(my $i=0; $i<$coupon_max; $i++) {
-                $coupon_saved[$coupon_save_cnt][$i] = $coupon_used[$i];
-                next if( $coupon_used[$i]==0 );
-                #print "DEBUG: [$coupon_merge[$i][$item_loc{'優惠代碼'}]] $coupon_merge[$i][$item_loc{'名稱'}] \$$coupon_merge[$i][$item_loc{'優惠價'}] * $coupon_used[$i]\n";
-            }
-
-            $cost_save[$coupon_save_cnt] = $cost_cur;
-            $coupon_save_cnt++;
-
-            #減少時間：只算前幾個便宜的
-            push @log_pool, $cost_cur;
-            @log_pool = sort {$a <=> $b} @log_pool;
-        #} else {
-        #    print "DEBUG 買不齊: item_name[$item_chk]=$item_name[$item_chk] reqitem_cur[$item_chk]=$reqitem_cur[$item_chk] >0\n";
-        }
-        return;
+    #計算最多幾組
+    my $range_max=0;
+    if( $driveway_only[$level] && ($driveway_coupon_used || !$driveway_enable) ) {
+        #點餐車道VIP coupon
+        #   用過 或是 不是經由KFC點餐車道
+    } elsif( $coupon2_merge[$level] == 0 ) {
+        #出現不要的食物 或 沒符合需求
     } else {
-        #計算最多幾組
-        my $range_max=0;
-
-        if( $driveway_only[$level] && ($driveway_coupon_used || !$driveway_enable) ) {
-            #點餐車道VIP coupon
-            #   用過 或是 不是經由KFC點餐車道
-        } else {
-            for(my $i=$item_1st_loc; $i<$item_max; $i++) {
-                next if($coupon_merge[$level][$i]==0);
-
-                if($reqitem_cur[$i]<0) { #出現不要的食物
-                    $range_max = 0;
-                    last;
-                }
-
-                my $range_this = ($reqitem_cur[$i]-($reqitem_cur[$i]%$coupon_merge[$level][$i])) / $coupon_merge[$level][$i];
-                $range_this++ if( ($reqitem_cur[$i]%$coupon_merge[$level][$i]) > 0); #非整除
+        my $coupon2_merge_level = $coupon2_merge[$level];
+        my $reqitem2_gold_this = $reqitem2_gold;
+        my $reqitem2_now_this = $reqitem2_now;
+        for(my $i=0; $i<$reqitem2_cnt; $i++) {
+            my $this = $coupon2_merge_level & 0xff;
+            my $gold_this = $reqitem2_gold_this & 0xff;
+            my $now_this = $reqitem2_now_this & 0xff;
+            if( $this>0 && $gold_this>$now_this ) {
+                my $range_this = int( ($gold_this - $now_this)/$this );
+                $range_this++ if( $gold_this-$now_this > $range_this*$this ); #非整除
 
                 #需要搭配套餐 而且 套餐數不夠用 --> 減少挑配餐
                 if( $coupon_set[$level]<0 && $range_this > $accu_set ) {
                     $range_this = $accu_set;
                 }
-                #if( $range_this > 0 ) {
-                #    print "DEBUG C: i=$i, item_name[$i]=$item_name[$i], reqitem_cur[$i]=$reqitem_cur[$i], coupon[$level][$i]=$coupon[$level][$i]\n";
-                #}
+
                 $range_max = $range_this if( $range_max < $range_this );
                 $range_max = 1 if( $driveway_only[$level] ); #點餐車道vip只能用一張
             }
+            $coupon2_merge_level >>= 8;
+            $reqitem2_gold_this >>= 8;
+            $reqitem2_now_this >>= 8;
+        }
+    }
+
+    # 0組
+    &compute_loop( $level+1 ) if($level<$coupon_max);
+
+    for(my $i=1; $i<=$range_max; $i++) {
+        my $cost_tmp = $cost_bak + $coupon_merge_price[$level]*$i;
+        if( $cost_tmp>$ori_price_total || $cost_tmp>$log_pool[$log_capacity] ) {
+            #print "DEBUG: price $cost_tmp>$ori_price_total || $cost_tmp>$log_pool[$log_capacity]\n";
+            last; #已經太貴了，之後就不用試了
         }
 
-        for(my $i=0; $i<=$range_max; $i++) {
-            my $cost_tmp = $cost_bak + $coupon_merge[$level][$item_loc{'優惠價'}]*$i;
-            if( $cost_tmp>$ori_price_total || $cost_tmp>$log_pool[$log_capacity] ) {
-                #print "DEBUG: price $cost_tmp>$ori_price_total || $cost_tmp>$log_pool[$log_capacity]\n";
-                last;
-            }
+        $coupon_used[$level] = $i;
+        $reqitem2_now = $reqitem2_bak + $coupon2_merge[$level]*$i;
 
-            $coupon_used[$level] = $i;
-            for(my $j=$item_1st_loc; $j<$item_max; $j++) {
-                $reqitem_cur[$j] -= $coupon_merge[$level][$j]*$i;# if($coupon_merge[$level][$j]>0);
+        $type_used++ if($i>0);
+        $driveway_coupon_used++ if($driveway_only[$level] && $i>0 );
+        my $all_bought_tried = 0;
+        if($i>0 && $i==$range_max ) { # 只有在滿max才需要算是否全買完
+            #print "DEBUG meet!\n";
+            $all_bought_tried = &all_bought;
+            if( $all_bought_tried && !($type_used<2 && $driveway_coupon_used) ) { #車道vip有其他消費==>不是只有車道消費
+                for(my $j=0; $j<$coupon_max; $j++) {
+                    $coupon_saved[$coupon_save_cnt][$j] = $coupon_used[$j];
+                    #next if( $coupon_used[$j]==0 );
+                    #print "DEBUG: [$coupon_merge[$j][$item_loc{'優惠代碼'}]] $coupon_merge[$j][$item_loc{'名稱'}] \$$coupon_merge[$j][$item_loc{'優惠價'}] * $coupon_used[$j]\n";
+                }
+    
+                $cost_save[$coupon_save_cnt] = $cost_tmp;
+                $coupon_save_cnt++;
+    
+                #減少時間：只算前幾個便宜的
+                #push @log_pool, $cost_tmp;
+                if( $log_pool[$log_capacity]>$cost_tmp ) {
+                    $log_pool[$log_capacity]=$cost_tmp;
+                    @log_pool = sort {$a <=> $b} @log_pool;
+                }
             }
-            $cost_cur = $cost_tmp;
+        }
+
+        if( !$all_bought_tried && $level<$coupon_max ) {
             $accu_set += $coupon_set[$level]*$i;
-            $type_used++ if($i>0);
-            $driveway_coupon_used++ if($driveway_only[$level] && $i>0 );
-            #print "DEBUG: $level/$coupon_max: ".(" "x$level)."$coupon[$level][$item_loc{'名稱'}] $coupon[$level][$item_loc{'優惠代碼'}] range = $i/$range_max\n";
+            $cost_cur = $cost_tmp;
             &compute_loop( $level+1 );
-            ###
+            $cost_cur = $cost_bak;
             $accu_set -= $coupon_set[$level]*$i;
-            @reqitem_cur = @reqitem_bak;
-            $type_used-- if($i>0);
-            $driveway_coupon_used-- if($driveway_only[$level] && $i>0 );
         }
+        ###
+        $driveway_coupon_used-- if($driveway_only[$level] && $i>0 );
+        $type_used-- if($i>0);
+
+        $reqitem2_now = $reqitem2_bak;
+        $coupon_used[$level] = 0;
     }
 }
 
@@ -621,4 +679,16 @@ sub expired {
     }
     #print "DEBUG: ($vdate) $today_date $expired\n";
     return $expired;
+}
+
+#是否已買齊
+sub all_bought {
+    my $gold=$reqitem2_gold;
+    my $now=$reqitem2_now;
+    for(my $i=0; $i<$reqitem2_cnt; $i++) {
+        return 0 if( ($gold&0xff) > ($now&0xff) );
+        $gold>>=8;
+        $now>>=8;
+    }
+    return 1;
 }
